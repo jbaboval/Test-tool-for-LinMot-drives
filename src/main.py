@@ -6,7 +6,11 @@ Created on 26. des. 2012
 @author: Håvard
 '''
 
-import LinRS, time, random, logging
+from __future__ import print_function
+import LinRS
+import time
+import random
+import logging
 
 
 # configure the serial connection
@@ -14,15 +18,15 @@ ser = LinRS.Line('COM11').connect()
 #connect to one drive, (serial connection, drive ID)
 drive1 = LinRS.Drive(ser, '01')
 
-print 'Status telegram from drive: ' + drive1.get_status()
+print('Status telegram from drive: ' + drive1.get_status())
 
-print 'RX = ' + drive1.move_home()
+print('RX = ' + drive1.move_home())
 time.sleep(0.5)
 
 
-print 'RX = ' + drive1.move_to_pos(10)
+print('RX = ' + drive1.move_to_pos(10))
 time.sleep(0.5)
-print 'RX = ' + drive1.move_to_pos(0)
+print('RX = ' + drive1.move_to_pos(0))
 
 
 ## Loop for random movement. Commented out by default.
@@ -39,4 +43,3 @@ ser.close()
 
 if __name__ == '__main__':
     pass
-

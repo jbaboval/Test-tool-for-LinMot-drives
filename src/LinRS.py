@@ -1,20 +1,19 @@
-import base64,serial
-from numpy.ma.core import mod
+from __future__ import print_function
+import base64
+import serial
 from base64 import b16encode
-from macpath import join
 
 
 class Line:
-    
+
     def __init__(self, serial_port):
         self.serial_port = serial_port
-        
+
     def close(self):
         self.con.close()
-        
+
     def connect(self):
-        con = serial.Serial(
-                            port=self.serial_port,
+        con = serial.Serial(port=self.serial_port,
                             baudrate=38400,
                             parity=serial.PARITY_NONE,
                             stopbits=serial.STOPBITS_ONE,
@@ -27,7 +26,7 @@ class Drive:
         self.id = drive_id
         self.token = '02'
         self.connection = connection
-    
+
     def encode(self, mm):
         scaled = mm * 10000
         data = ['0','0','0','0','0','0','0','0']
@@ -38,8 +37,8 @@ class Drive:
             n+=1
             char = hex(scaled)[-n]
         sorted_data = [data[1],data[0],data[3],data[2],data[5],data[4],data[7],data[6]]
-        return ''.join(sorted_data).upper()        
-    
+        return ''.join(sorted_data).upper()
+
     def get_status(self):
         dataString = "01" + self.id + "05020001000004"
         data = base64.b16decode(dataString)
@@ -56,15 +55,15 @@ class Drive:
             if inputByte == '04':
                 loop=False
         return inputWord
-    
+
     def move_to_pos(self, pos, print_details=False):
         if self.token == '02':
             self.token ='01'
         else:
             self.token = '02'
-    
+
         dataString = "01" + self.id + "09020002" + self.token + "02" + self.encode(pos) + "04"
-        print 'TX = '+dataString + '(move to pos)'
+        print('TX = '+dataString + '(move to pos)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
         i=30
@@ -81,11 +80,11 @@ class Drive:
         if print_details:
             self._get_response(inputWord)
         return inputWord
-    
+
     def move_home(self):
         dataString = "01" + self.id + "0902000202020000000004"
-        
-        print 'TX = '+dataString + ' (move home)'
+
+        print('TX = '+dataString + ' (move home)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
         i=30
@@ -100,21 +99,21 @@ class Drive:
             if inputByte == '04':
                 loop=False
         return inputWord
-    
+
     def _get_response(self, response):
-        print 'RX = ' + response
+        print('RX = ' + response)
         if response[0:2] == '01':
-            print '01 Write Control Word'
+            print('01 Write Control Word')
         else:
-            print response[0:2] + " Unknown header"
-        print response[2:4] + ' Address'
+            print(response[0:2] + " Unknown header")
+        print(response[2:4] + ' Address')
         length = int(response[4:6],16)
-        print response[4:6] + ' Data length'
+        print(response[4:6] + ' Data length')
         temp=0
         while temp < length:
-            print response[6+2*temp:8+2*temp]
+            print(response[6+2*temp:8+2*temp])
             temp+=1
-        print response[6+2*temp:8+2*temp] + ' End telegram'
+        print(response[6+2*temp:8+2*temp] + ' End telegram')
 
 if __name__ == '__main__':
     ##Test code for module
@@ -122,19 +121,19 @@ if __name__ == '__main__':
     con = Line('COM11').connect()
     lin = Drive(con, '01')
     lin.move_home()
-    print lin.move_to_pos(0, False)
+    print(lin.move_to_pos(0, False))
     time.sleep(0.2)
-    print lin.move_to_pos(10, False)
+    print(lin.move_to_pos(10, False))
     time.sleep(0.2)
-    print lin.move_to_pos(50, False)
+    print(lin.move_to_pos(50, False))
     time.sleep(0.2)
-    print lin.move_to_pos(100, False)
+    print(lin.move_to_pos(100, False))
     time.sleep(0.2)
-    print lin.move_to_pos(150, False)
+    print(lin.move_to_pos(150, False))
     time.sleep(0.2)
-    print lin.move_to_pos(100, False)
+    print(lin.move_to_pos(100, False))
     time.sleep(0.2)
-    print lin.move_to_pos(50, False)
-    
+    print(lin.move_to_pos(50, False))
+
     con.close()
-    #print lin.encode(10)
+    #print(lin.encode(10))

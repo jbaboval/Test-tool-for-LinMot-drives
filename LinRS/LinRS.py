@@ -28,14 +28,14 @@ class Drive(object):
 
     def encode(self, mm):
         scaled = mm * 10000
-        data = ['0','0','0','0','0','0','0','0']
-        n=1
+        data = ['0', '0', '0', '0', '0', '0', '0', '0']
+        n = 1
         char = hex(scaled)[-n]
         while char != 'x':
             data[n-1] = char
-            n+=1
+            n += 1
             char = hex(scaled)[-n]
-        sorted_data = [data[1],data[0],data[3],data[2],data[5],data[4],data[7],data[6]]
+        sorted_data = [data[i] for i in (1, 0, 3, 2, 5, 4, 7, 6)]
         return ''.join(sorted_data).upper()
 
     def get_status(self):
@@ -55,11 +55,12 @@ class Drive(object):
 
     def move_to_pos(self, pos, print_details=False):
         if self.token == '02':
-            self.token ='01'
+            self.token = '01'
         else:
             self.token = '02'
 
-        dataString = "01" + self.id + "09020002" + self.token + "02" + self.encode(pos) + "04"
+        dataString = ("01" + self.id + "09020002" + self.token + "02" +
+                      self.encode(pos) + "04")
         print('TX = '+dataString + '(move to pos)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
@@ -84,17 +85,17 @@ class Drive(object):
         else:
             print(response[0:2] + " Unknown header")
         print(response[2:4] + ' Address')
-        length = int(response[4:6],16)
+        length = int(response[4:6], 16)
         print(response[4:6] + ' Data length')
-        temp=0
+        temp = 0
         while temp < length:
             print(response[6+2*temp:8+2*temp])
-            temp+=1
+            temp += 1
         print(response[6+2*temp:8+2*temp] + ' End telegram')
 
 
 if __name__ == '__main__':
-    ##Test code for module
+    ## Test code for module
     import time
     con = Line('COM11').connect()
     lin = Drive(con, '01')
@@ -114,4 +115,4 @@ if __name__ == '__main__':
     print(lin.move_to_pos(50, False))
 
     con.close()
-    #print(lin.encode(10))
+    # print(lin.encode(10))

@@ -5,7 +5,6 @@ from base64 import b16encode
 
 
 class Line:
-
     def __init__(self, serial_port):
         self.serial_port = serial_port
 
@@ -114,6 +113,7 @@ class Drive:
             print(response[6+2*temp:8+2*temp])
             temp+=1
         print(response[6+2*temp:8+2*temp] + ' End telegram')
+
 
 if __name__ == '__main__':
     ##Test code for module

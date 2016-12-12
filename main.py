@@ -9,8 +9,6 @@ Created on 26. des. 2012
 from __future__ import print_function
 import LinRS
 import time
-import random
-import logging
 
 
 def test(port='COM11'):
@@ -31,11 +29,12 @@ def test(port='COM11'):
 
 
     ## Loop for random movement. Commented out by default.
-    #i=50
-    #while i>0:
-    #    i-=1
-    #    drive1.move_to_pos(random.randint(0, 120))
-    #    time.sleep(random.uniform(0.1,0.5))
+    # import random
+    # i=50
+    # while i>0:
+    #     i-=1
+    #     drive1.move_to_pos(random.randint(0, 120))
+    #     time.sleep(random.uniform(0.1,0.5))
 
     ser.close()
 

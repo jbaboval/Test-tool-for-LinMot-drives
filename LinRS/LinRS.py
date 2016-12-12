@@ -1,10 +1,9 @@
 from __future__ import print_function
 import base64
 import serial
-from base64 import b16encode
 
 
-class Line:
+class Line(object):
     def __init__(self, serial_port):
         self.serial_port = serial_port
 
@@ -12,15 +11,16 @@ class Line:
         self.con.close()
 
     def connect(self):
-        con = serial.Serial(port=self.serial_port,
-                            baudrate=38400,
-                            parity=serial.PARITY_NONE,
-                            stopbits=serial.STOPBITS_ONE,
-                            bytesize=serial.EIGHTBITS
-                            )
-        return con
+        self.con = serial.Serial(port=self.serial_port,
+                                 baudrate=38400,
+                                 parity=serial.PARITY_NONE,
+                                 stopbits=serial.STOPBITS_ONE,
+                                 bytesize=serial.EIGHTBITS
+                                 )
+        return self.con
 
-class Drive:
+
+class Drive(object):
     def __init__(self, connection, drive_id='01'):
         self.id = drive_id
         self.token = '02'
@@ -42,17 +42,15 @@ class Drive:
         dataString = "01" + self.id + "05020001000004"
         data = base64.b16decode(dataString)
         self.connection.write(data)
-        i=30
-        loop=True
+        return self._read_response()
+
+    def _read_response(self):
         inputWord = ""
-        while loop:
-            i-=1
+        for i in range(31):
             inputByte = base64.b16encode(self.connection.read())
             inputWord += inputByte
-            if i<0:
-                loop=False
             if inputByte == '04':
-                loop=False
+                break
         return inputWord
 
     def move_to_pos(self, pos, print_details=False):
@@ -65,19 +63,10 @@ class Drive:
         print('TX = '+dataString + '(move to pos)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
-        i=30
-        loop=True
-        inputWord = ""
-        while loop:
-            i-=1
-            inputByte = base64.b16encode(self.connection.read())
-            inputWord += inputByte
-            if i<0:
-                loop=False
-            if inputByte == '04':
-                loop=False
+        inputWord = self._read_response()
+
         if print_details:
-            self._get_response(inputWord)
+            self._parse_response(inputWord)
         return inputWord
 
     def move_home(self):
@@ -86,20 +75,9 @@ class Drive:
         print('TX = '+dataString + ' (move home)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
-        i=30
-        loop=True
-        inputWord = ""
-        while loop:
-            i-=1
-            inputByte = base64.b16encode(self.connection.read())
-            inputWord += inputByte
-            if i<0:
-                loop=False
-            if inputByte == '04':
-                loop=False
-        return inputWord
+        return self._read_response()
 
-    def _get_response(self, response):
+    def _parse_response(self, response):
         print('RX = ' + response)
         if response[0:2] == '01':
             print('01 Write Control Word')

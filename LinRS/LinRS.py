@@ -233,18 +233,6 @@ class Drive(object):
     def waitForState(self, state, **kwargs):
         self.waitForStates((state), **kwargs)
 
-    def encode(self, mm):
-        scaled = mm * 10000
-        data = ['0', '0', '0', '0', '0', '0', '0', '0']
-        n = 1
-        char = hex(scaled)[-n]
-        while char != 'x':
-            data[n-1] = char
-            n += 1
-            char = hex(scaled)[-n]
-        sorted_data = [data[i] for i in (1, 0, 3, 2, 5, 4, 7, 6)]
-        return ''.join(sorted_data).upper()
-
     def responseRequest(self, subtype):
         message = LinRSRequest(main_id='00', sub_id=subtype)
         self.connection.write(str(message))
@@ -499,7 +487,4 @@ if __name__ == '__main__':
     time.sleep(0.5)
     print(lin.move_to_pos(50, velocity=1000000, acceleration=100000, deceleration=100000))
 
-
-
     con.close()
-    # print(lin.encode(10))

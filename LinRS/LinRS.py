@@ -5,6 +5,9 @@ from ctypes import *
 import sys
 import pprint
 import struct
+import logging
+
+logger = logging.getLogger(__name__)
 
 class InvalidResponseException(Exception):
     pass
@@ -19,7 +22,7 @@ class LinRSRequest(object):
         self.end = '04'
 
     def __str__(self):
-        print(self.__repr__())
+        logger.debug(self.__repr__())
         return base64.b16decode(self.__repr__(), True)
 
     def __repr__(self):
@@ -303,32 +306,32 @@ class Drive(object):
         response = self._read_response()
 
         if print_details:
-            print(response)
+            logger.info(response)
         return response
     move_to_pos = moveToPos
 
     def move_home(self):
         dataString = "01" + self.id + "0902000202020000000004"
 
-        print('TX = '+dataString + ' (move home)')
+        logger.debug('TX = '+dataString + ' (move home)')
         data = base64.b16decode(dataString)
         self.connection.write(data)
         return self._read_response()
 
     def _parse_response(self, response):
-        print('RX = ' + response)
+        logger.debug('RX = ' + response)
         if response[0:2] == '01':
-            print('01 Write Control Word')
+            logger.debug('01 Write Control Word')
         else:
-            print(response[0:2] + " Unknown header")
-        print(response[2:4] + ' Address')
+            logger.debug(response[0:2] + " Unknown header")
+        logger.debug(response[2:4] + ' Address')
         length = int(response[4:6], 16)
-        print(response[4:6] + ' Data length')
+        logger.debug(response[4:6] + ' Data length')
         temp = 0
         while temp < length:
-            print(response[6+2*temp:8+2*temp])
+            logger.debug(response[6+2*temp:8+2*temp])
             temp += 1
-        print(response[6+2*temp:8+2*temp] + ' End telegram')
+        logger.debug(response[6+2*temp:8+2*temp] + ' End telegram')
 
     def getState(self):
         state_var = self.getStateVar()
@@ -336,7 +339,6 @@ class Drive(object):
         sub_state = state_var[2:4]
 
         if main_state == '08':
-            print(sub_state)
             sub_int = int(sub_state, 16)
             if sub_int & 0x40:
                 return 'C8'
@@ -350,14 +352,15 @@ class Drive(object):
         return main_state
 
     def initialize(self):
+        logger.info("Initializing drive state machine")
         sequence = ('00', '01', '02', '05', '06', '08', '09', 'C8')
         index = 0
         while index < len(sequence) - 1:
             state = self.getState()
             index = sequence.index(state)
-            print("Current state: %s" % self.states[state]['description'])
+            logger.info("Current state: %s" % self.states[state]['description'])
             try:
-                print("Next state:    %s" % self.states[sequence[index+1]]['description'] )
+                logger.debug("Next state:    %s" % self.states[sequence[index+1]]['description'] )
             except:
                 return
             (function, param) = self.states[state]['to'][sequence[index+1]]
@@ -421,6 +424,8 @@ class Drive(object):
     }
 
 if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG)
 
     cw = ControlWord()
     cw.bit.home = 1

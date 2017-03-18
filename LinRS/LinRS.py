@@ -6,10 +6,14 @@ import sys
 import pprint
 import struct
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
 class InvalidResponseException(Exception):
+    pass
+
+class ControllerError(Exception):
     pass
 
 class LinRSRequest(object):
@@ -225,16 +229,22 @@ class Drive(object):
         self.control_word = cw
         return self._read_response()
 
-    def waitForStates(self, states, timeout=15):
+    def waitForState(self, state, timeout=30, frequency=0.1):
         count = 0
-        while self.getStateVar() not in states:
-            count += 1
-            time.sleep(0.1)
+        current_state=self.getStateVar()
+        while not current_state.startswith(state):
+
+            logger.debug("Waiting for state: %s, Current state: %s" % (state, current_state))
+
+            if current_state.startswith('04'):
+                raise ControllerError("Error Code: " + current_state[2:4])
+
             if timeout > 0 and (count * 0.1) > timeout:
                 raise Exception("Timed out waiting for states %s", str(states))
 
-    def waitForState(self, state, **kwargs):
-        self.waitForStates((state), **kwargs)
+            count += 1
+            time.sleep(frequency)
+            current_state=self.getStateVar()
 
     def responseRequest(self, subtype):
         message = LinRSRequest(main_id='00', sub_id=subtype)
@@ -338,6 +348,8 @@ class Drive(object):
         main_state = state_var[0:2]
         sub_state = state_var[2:4]
 
+        logger.debug("State Var: %s" % state_var)
+
         if main_state == '08':
             sub_int = int(sub_state, 16)
             if sub_int & 0x40:
@@ -353,11 +365,15 @@ class Drive(object):
 
     def initialize(self):
         logger.info("Initializing drive state machine")
-        sequence = ('00', '01', '02', '05', '06', '08', '09', 'C8')
+        sequence = ('A8', '14', '03', '04', '00', '01', '02', '05', '06', '08', '09', 'C8')
         index = 0
         while index < len(sequence) - 1:
             state = self.getState()
-            index = sequence.index(state)
+            try:
+                index = sequence.index(state)
+            except ValueError as e:
+                logger.error("Sequence doesn't contain state %s (%s)" % (state, self.states[state]['description']))
+                raise
             logger.info("Current state: %s" % self.states[state]['description'])
             try:
                 logger.debug("Next state:    %s" % self.states[sequence[index+1]]['description'] )
@@ -413,14 +429,17 @@ class Drive(object):
                  },
            'A8': { 'description': 'Operation enabled (Motion Active)',
                    'to':          { 'C8': ( waitForState,
-                                            'C8' ) }
+                                            'C8' ),
+                                    '14': ( writeControlWord,
+                                            ControlWord(switch_on=1, voltage_enable=1, not_quick_stop=0, enable_operation=0) ) }
                  },
            'C8': { 'description': 'Operation enabled (In Target Position)' },
            '09': { 'description': 'Homing',
                    'to':          { 'C8': ( home,
                                             None ) }
                  },
-           '10': { 'description': 'Clearance Check' }
+           '10': { 'description': 'Clearance Check' },
+           '14': { 'description': 'Quick Stop' }
     }
 
 if __name__ == '__main__':

@@ -1,23 +1,21 @@
-Code comments:
-This is a test tool i have written to test LinMot drives. The tool only use a limited set of instructions.
-Please commit more code if you want.
+LinMot LinRS protocol library for RS232 or RS422
 
 License:
 GNU General Public License v2
+Based on LinMot test tool by Havard Line https://github.com/HavardLine/Test-tool-for-LinMot-drives
 
-Safety:
-Please do not set power on anything before you have good safety.
-This program has no limits, thus it can shoot parts longer than intended.
+Usage:
 
-Parameters:
-LinRS protocol
-checksum = none
-drive id = 01
-RS232
-COM11
-baudrate = 38400
-parity = none
-stop bits = 1
+import LinRS
 
-Regards
-Havard
+connection = Line('/dev/ttyN').connect()
+drive = Drive(connection, '01') # Drive ID from S2
+
+drive.initialize() # Walks the state machine to "Ready To Operate"
+drive.move_home()  # Moves to the home position - move somewhere else soon to prevent overheat
+
+# Position units is mm
+drive.moveToPos(100, velocity=<Units: 1E-6 m/s>, max_acceleration=<Units 1E-5 m/s^2>, max_deceleration=<Units 1E-5 m/2^2>)
+
+print drive.getStateVar()
+

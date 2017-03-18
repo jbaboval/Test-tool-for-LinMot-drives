@@ -24,7 +24,7 @@ class LinRSRequest(object):
 
     def __repr__(self):
         data_len = (len(self.data) / 2) + 3
-        return self.header + self.drive_id + '{0:02x}'.format(data_len) + '02' + self.sub_id + self.main_id + self.data + self.end
+        return self.header + self.drive_id + '{0:02X}'.format(data_len) + '02' + self.sub_id + self.main_id + self.data + self.end
 
 class LinRSResponse(object):
     def __init__(self, bytes=()):
@@ -45,26 +45,34 @@ class LinRSResponse(object):
     def __repr__(self):
         return("LinRSResponse (state: %s)" % self.communication_state)
 
-class ControlWordBits(BigEndianStructure):
+class LittleEndianPrintableStructure(LittleEndianStructure):
+    def __str__(self):
+        return base64.b16encode(buffer(self))
+
+    def __repr__(self):
+        return("%s: %s" % (self.__class__, self.__str__()))
+
+# LittleEndianUnion doesn't seem to be implemented, so this is a hack
+class ControlWordBits(LittleEndianPrintableStructure):
     _pack_   = 1
     _fields_ = [
-                  ('phase_search',      c_uint16, 1),
-                  ('reserved1',         c_uint16, 1),
-                  ('goto_initial',      c_uint16, 1),
-                  ('clearance_check',   c_uint16, 1),
-                  ('home',              c_uint16, 1),
-                  ('special_mode',      c_uint16, 1),
-                  ('jog_minus',         c_uint16, 1),
                   ('jog_plus',          c_uint16, 1),
-                  ('error_acknowledge', c_uint16, 1),
-                  ('goto_position',     c_uint16, 1),
-                  ('not_freeze',        c_uint16, 1),
-                  ('not_abort',         c_uint16, 1),
-                  ('enable_operation',  c_uint16, 1),
-                  ('not_quick_stop',    c_uint16, 1),
+                  ('jog_minus',         c_uint16, 1),
+                  ('special_mode',      c_uint16, 1),
+                  ('home',              c_uint16, 1),
+                  ('clearance_check',   c_uint16, 1),
+                  ('goto_initial',      c_uint16, 1),
+                  ('reserved1',         c_uint16, 1),
+                  ('phase_search',      c_uint16, 1),
+                  ('switch_on',         c_uint16, 1),
                   ('voltage_enable',    c_uint16, 1),
-                  ('switch_on',         c_uint16, 1)
-               ]
+                  ('not_quick_stop',    c_uint16, 1),
+                  ('enable_operation',  c_uint16, 1),
+                  ('not_abort',         c_uint16, 1),
+                  ('not_freeze',        c_uint16, 1),
+                  ('goto_position',     c_uint16, 1),
+                  ('error_acknowledge', c_uint16, 1),
+              ]
 
 class ControlWord(Union):
     _anonymous_ = ('bit',)
@@ -72,6 +80,117 @@ class ControlWord(Union):
                 ('bit',     ControlWordBits ),
                 ('asBytes', c_uint16        )
                ]
+
+class MotionCommandHeader(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('command_count', c_uint16, 4),
+                  ('sub_id',        c_uint16, 4),
+                  ('master_id',     c_uint16, 8),
+               ]
+
+class VAIGoToPosFromAct(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+                  ('max_velocity',     c_uint32),
+                  ('max_acceleration', c_uint32),
+                  ('max_deceleration', c_uint32)
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x01
+        self.header.sub_id    = 0x3
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+        self.max_velocity         = kwargs.pop('max_velocity', 1)
+        self.max_acceleration     = kwargs.pop('max_acceleration', 1)
+        self.max_deceleration     = kwargs.pop('max_deceleration', 1)
+
+class VAIGoToPosAfter(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+                  ('max_velocity',     c_uint32),
+                  ('max_acceleration', c_uint32),
+                  ('max_deceleration', c_uint32)
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x01
+        self.header.sub_id    = 0x8
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+
+class PredefVAIGoToPosFromAct(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x02
+        self.header.sub_id    = 0x3
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+
+class PredefVAIGoToPosAfter(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x02
+        self.header.sub_id    = 0x8
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+
+class VAIPredefAccGoToPosFromAct(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+                  ('max_velocity',     c_uint32),
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x0B
+        self.header.sub_id    = 0x3
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+        self.max_velocity         = kwargs.pop('max_velocity', 1)
+
+class VAIPredefAccGoToPosAfter(LittleEndianPrintableStructure):
+    _pack_   = 1
+    _fields_ = [
+                  ('header',           MotionCommandHeader),
+                  ('target_position',  c_int32),
+                  ('max_velocity',     c_uint32),
+               ]
+
+    def __init__(self, **kwargs):
+
+        self.header.master_id = 0x0B
+        self.header.sub_id    = 0x8
+
+        self.header.command_count = kwargs.pop('command_count', 0)
+        self.target_position      = kwargs.pop('target_position', 1)
+        self.max_velocity         = kwargs.pop('max_velocity', 1)
 
 class Line(object):
     def __init__(self, serial_port):
@@ -93,7 +212,7 @@ class Drive(object):
 
     def __init__(self, connection, drive_id='01'):
         self.id = drive_id
-        self.token = '02'
+        self.command_count = 1
         self.connection = connection
 
     def writeControlWord(self, cw):
@@ -103,13 +222,16 @@ class Drive(object):
         self.control_word = cw
         return self._read_response()
 
-    def waitForState(self, state, timeout=15):
+    def waitForStates(self, states, timeout=15):
         count = 0
-        while self.getStateVar() != state:
+        while self.getStateVar() not in states:
             count += 1
             time.sleep(0.1)
             if timeout > 0 and (count * 0.1) > timeout:
-                raise Exception("Timed out waiting for state %s", state)
+                raise Exception("Timed out waiting for states %s", str(states))
+
+    def waitForState(self, state, **kwargs):
+        self.waitForStates((state), **kwargs)
 
     def encode(self, mm):
         scaled = mm * 10000
@@ -166,22 +288,36 @@ class Drive(object):
         self.control_word.bit.home = 0
         self.writeControlWord(self.control_word)
 
-    def move_to_pos(self, pos, print_details=False):
-        if self.token == '02':
-            self.token = '01'
-        else:
-            self.token = '02'
+    def moveToPos(self, pos, print_details=False, velocity=None, acceleration=None, deceleration=None):
+        message = LinRSRequest(main_id='02', sub_id='00')
 
-        dataString = ("01" + self.id + "09020002" + self.token + "02" +
-                      self.encode(pos) + "04")
-        print('TX = '+dataString + '(move to pos)')
-        data = base64.b16decode(dataString)
-        self.connection.write(data)
-        inputWord = self._read_response()
+        if velocity is not None and (acceleration is not None or deceleration is not None):
+            mc = VAIGoToPosFromAct()
+            mc.max_velocity = velocity
+            if acceleration is not None:
+                mc.max_acceleration = acceleration
+            if deceleration is not None:
+                mc.max_deceleration = deceleration
+        elif velocity is not None:
+            mc = VAIPredefAccGoToPosFromAct()
+            mc.max_velocity = velocity
+        else:
+            mc = PredefVAIGoToPosFromAct()
+
+        mc.target_position = pos * 10000
+
+        self.command_count += 1
+        mc.header.command_count = self.command_count % 0xF
+
+        message.data = str(mc)
+
+        self.connection.write(str(message))
+        response = self._read_response()
 
         if print_details:
-            self._parse_response(inputWord)
-        return inputWord
+            print(response)
+        return response
+    move_to_pos = moveToPos
 
     def move_home(self):
         dataString = "01" + self.id + "0902000202020000000004"
@@ -265,7 +401,7 @@ class Drive(object):
                  },
            '05': { 'description': 'HW Tests',
                    'to':          { '06': ( waitForState,
-                                            '0006' ) }
+                                            '0800' ) }
                  },
            '06': { 'description': 'Ready to Operate',
                    'to':          { '08': ( writeControlWord,
@@ -304,6 +440,12 @@ if __name__ == '__main__':
     message.data = '{0:04x}'.format(cw.asBytes)
 
     print(repr(message))
+
+    vai = PredefVAIGoToPosFromAct(target_position=(50 * 10000))
+    message.data = str(vai)
+    print(repr(message))
+
+    #sys.exit(0)
 
     ## Test code for module
     import time
